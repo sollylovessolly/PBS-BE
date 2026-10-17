@@ -10,5 +10,6 @@ export interface FileStorage {
     body: Buffer;
   }): Promise<StoredFile>;
   download(key: string): Promise<DownloadedFile>;
+  downloadUrl?(key: string): Promise<string>;
   delete(key: string): Promise<void>;
 }

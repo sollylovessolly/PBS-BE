@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nestjs",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build:vercel",
+  "regions": ["iad1"],
+  "crons": [{ "path": "/api/maintenance/cleanup", "schedule": "0 3 * * *" }]
+}

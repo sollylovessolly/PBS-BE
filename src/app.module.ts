@@ -27,6 +27,8 @@ import { SecurityModule } from './security/security.module';
 import { validateEnvironment } from './config/env.validation';
 import { DiscountsModule } from './discounts/discounts.module';
 import { ShippingModule } from './shipping/shipping.module';
+import { GalleryModule } from './gallery/gallery.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -57,6 +59,8 @@ import { ShippingModule } from './shipping/shipping.module';
     SecurityModule,
     DiscountsModule,
     ShippingModule,
+    GalleryModule,
+    ReviewsModule,
   ],
 
   controllers: [AppController],

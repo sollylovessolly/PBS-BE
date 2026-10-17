@@ -9,12 +9,11 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    // Prefer a direct (non-pooler) connection for the pg adapter. The adapter
-    // manages its own pool, so routing through Neon's PgBouncer pooler causes
-    // interactive transactions to fail with P2028 ("Unable to start a
-    // transaction in the given time"). Fall back to DATABASE_URL if DIRECT_URL
-    // is not set.
-    const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+    // Serverless instances share Neon's pooled URL. Local/Render deployments
+    // retain their direct connection; migrations always use DIRECT_URL.
+    const connectionString = process.env.VERCEL
+      ? process.env.DATABASE_URL
+      : (process.env.DIRECT_URL ?? process.env.DATABASE_URL);
 
     if (!connectionString) {
       throw new Error(
@@ -24,7 +23,7 @@ export class PrismaService
 
     const adapter = new PrismaPg({
       connectionString,
-      max: 10,
+      max: process.env.VERCEL ? 2 : 10,
       connectionTimeoutMillis: 20_000,
       idleTimeoutMillis: 30_000,
     });

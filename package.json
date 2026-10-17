@@ -7,6 +7,16 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "build:vercel": "prisma generate && nest build",
+    "db:deploy": "prisma migrate deploy",
+    "storage:migrate": "node --import tsx scripts/migrate-storage.ts",
+    "storage:configure": "node --import tsx scripts/configure-storage.ts",
+    "storage:verify": "node --import tsx scripts/verify-storage.ts",
+    "storage:update-urls": "node --import tsx scripts/update-artwork-urls.ts",
+    "storage:recover-orders": "node --import tsx scripts/recover-order-files.ts",
+    "db:verify": "node --import tsx scripts/verify-database.ts",
+    "verify:vercel": "node --import tsx scripts/verify-vercel-runtime.ts",
+    "vercel:env": "node --import tsx scripts/prepare-vercel-env.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -21,6 +31,9 @@
     "seed": "tsx prisma/seed/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-presigned-post": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -34,7 +47,8 @@
     "helmet": "^8.3.0",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -44,6 +58,7 @@
     "@nestjs/testing": "^11.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.0.0",

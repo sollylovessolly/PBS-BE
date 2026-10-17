@@ -8,6 +8,14 @@ datasource db {
   provider = "postgresql"
 }
 
+model ApiRateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}
+
 model DeliveryRate {
   id              String   @id @default(cuid())
   state           String
@@ -32,13 +40,173 @@ model DiscountCode {
 }
 
 model Admin {
+  id                   String                 @id @default(cuid())
+  email                String                 @unique
+  passwordHash         String
+  name                 String
+  isActive             Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  galleryAlbumsCreated GalleryAlbum[]         @relation("GalleryCreatedBy")
+  galleryAlbumsUpdated GalleryAlbum[]         @relation("GalleryUpdatedBy")
+  galleryUploads       GalleryPhoto[]
+  galleryAudits        GalleryAudit[]
+  reviewModerations    ReviewAudit[]
+  contentDeletions     ContentDeletionAudit[]
+}
+
+model GalleryAlbum {
+  id                  String             @id @default(cuid())
+  slug                String             @unique
+  title               String
+  description         String             @default("")
+  status              GalleryAlbumStatus @default(DRAFT)
+  version             Int                @default(1)
+  permissionConfirmed Boolean            @default(false)
+  permissionActorId   String?
+  permissionAt        DateTime?
+  coverPhotoId        String?            @unique
+  createRequestKey    String?
+  createFingerprint   String?
+  createdById         String
+  updatedById         String
+  publishedAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  createdBy           Admin              @relation("GalleryCreatedBy", fields: [createdById], references: [id])
+  updatedBy           Admin              @relation("GalleryUpdatedBy", fields: [updatedById], references: [id])
+  photos              GalleryPhoto[]     @relation("AlbumPhotos")
+  coverPhoto          GalleryPhoto?      @relation("AlbumCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  audits              GalleryAudit[]
+
+  @@unique([createdById, createRequestKey])
+  @@index([status, publishedAt, id])
+  @@index([createdAt, id])
+}
+
+model GalleryPhoto {
+  id                 String        @id @default(cuid())
+  albumId            String?
+  uploaderId         String
+  requestKey         String
+  contentFingerprint String
+  fullKey            String        @unique
+  thumbnailKey       String        @unique
+  mimeType           String
+  byteSize           Int
+  width              Int
+  height             Int
+  caption            String        @default("")
+  alt                String        @default("")
+  featured           Boolean       @default(false)
+  sortOrder          Int?
+  expiresAt          DateTime?
+  createdAt          DateTime      @default(now())
+  album              GalleryAlbum? @relation("AlbumPhotos", fields: [albumId], references: [id], onDelete: SetNull)
+  coverFor           GalleryAlbum? @relation("AlbumCover")
+  uploader           Admin         @relation(fields: [uploaderId], references: [id])
+
+  @@unique([uploaderId, requestKey])
+  @@unique([albumId, sortOrder])
+  @@index([albumId, sortOrder, id])
+  @@index([expiresAt])
+}
+
+model GalleryAudit {
+  id                  String              @id @default(cuid())
+  albumId             String
+  actorId             String
+  action              String
+  priorStatus         GalleryAlbumStatus?
+  newStatus           GalleryAlbumStatus?
+  permissionConfirmed Boolean?
+  createdAt           DateTime            @default(now())
+  album               GalleryAlbum        @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  actor               Admin               @relation(fields: [actorId], references: [id])
+
+  @@index([albumId, createdAt])
+}
+
+model Review {
+  id                    String        @id @default(cuid())
+  displayName           String
+  rating                Int
+  text                  String
+  phone                 String
+  orderNumber           String?
+  status                ReviewStatus  @default(PENDING)
+  verifiedPurchase      Boolean       @default(false)
+  publicationConsent    Boolean
+  consentVersion        String
+  consentedAt           DateTime
+  version               Int           @default(1)
+  moderationReason      String?
+  moderatedById         String?
+  moderatedAt           DateTime?
+  requestKey            String        @unique
+  submissionFingerprint String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  photos                ReviewPhoto[]
+  audits                ReviewAudit[]
+
+  @@index([status, createdAt, id])
+  @@index([phone])
+}
+
+model ReviewPhoto {
   id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  isActive     Boolean  @default(true)
+  reviewId     String
+  fullKey      String   @unique
+  thumbnailKey String   @unique
+  mimeType     String
+  byteSize     Int
+  width        Int
+  height       Int
+  sortOrder    Int
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  review       Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, sortOrder])
+  @@index([reviewId, sortOrder])
+}
+
+model ReviewAudit {
+  id          String       @id @default(cuid())
+  reviewId    String
+  actorId     String
+  priorStatus ReviewStatus
+  newStatus   ReviewStatus
+  reason      String?
+  createdAt   DateTime     @default(now())
+  review      Review       @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  actor       Admin        @relation(fields: [actorId], references: [id])
+
+  @@index([reviewId, createdAt])
+}
+
+model StorageCleanupJob {
+  id            String   @id @default(cuid())
+  objectKey     String   @unique
+  purpose       String
+  attempts      Int      @default(0)
+  lastError     String?
+  nextAttemptAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([nextAttemptAt, createdAt])
+}
+
+model ContentDeletionAudit {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  actorId    String
+  createdAt  DateTime @default(now())
+  actor      Admin    @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
 }
 
 model Customer {
@@ -418,6 +586,17 @@ enum ProductCategory {
 enum DiscountType {
   FIXED
   PERCENTAGE
+}
+
+enum GalleryAlbumStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
 }
 
 enum OrderSource {

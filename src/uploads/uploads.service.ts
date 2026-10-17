@@ -35,7 +35,7 @@ export class UploadsService {
       throw new BadRequestException('File contents do not match its MIME type');
     }
     const maxBytes = this.maxBytes(purpose);
-    if (file.size > maxBytes) {
+    if (!file.size || file.size > maxBytes) {
       throw new BadRequestException(
         `File exceeds the ${Math.floor(maxBytes / 1_000_000)}MB limit`,
       );
@@ -74,7 +74,9 @@ export class UploadsService {
     if (!key.startsWith('production/')) {
       throw new BadRequestException('Invalid file token');
     }
-    return this.storage.download(key);
+    return this.storage.downloadUrl
+      ? this.storage.downloadUrl(key).then((redirectUrl) => ({ redirectUrl }))
+      : this.storage.download(key);
   }
 
   private maxBytes(purpose: UploadPurpose) {

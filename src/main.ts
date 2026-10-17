@@ -7,12 +7,15 @@ import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 import { SafeExceptionFilter } from './security/safe-exception.filter';
+import { LegacyArtworkInterceptor } from './uploads/legacy-artwork.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
     bodyParser: false,
   });
+  // Vercel supplies client IPs through its trusted edge proxy.
+  if (process.env.VERCEL) app.set('trust proxy', 1);
   app.use(
     helmet({
       contentSecurityPolicy: false,
@@ -32,6 +35,7 @@ async function bootstrap() {
   );
 
   const configService = app.get(ConfigService);
+  app.useGlobalInterceptors(new LegacyArtworkInterceptor(configService));
   app.useGlobalFilters(new SafeExceptionFilter());
   const bodyLimit = configService.get<string>('JSON_BODY_LIMIT', '1mb');
   app.useBodyParser('json', { limit: bodyLimit });
@@ -42,7 +46,13 @@ async function bootstrap() {
   const allowedOrigins = [
     configService.get<string>('FRONTEND_URL', 'http://localhost:3000'),
     configService.get<string>('ADMIN_FRONTEND_URL', 'http://localhost:3001'),
-  ].filter(Boolean);
+    configService.get<string>('ADDITIONAL_FRONTEND_ORIGINS', ''),
+  ].flatMap((value) =>
+    value
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  );
 
   app.setGlobalPrefix('api');
 
