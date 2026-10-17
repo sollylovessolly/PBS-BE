@@ -12,6 +12,7 @@ The application changes are committed and pushed to `main` in `sollylovessolly/p
 - All 14 existing Supabase files were copied and checksum-verified after the owner resumed the project; all 13 order-artwork references were independently verified in Neon.
 - The backend's production environment and the frontend's four public environment values are configured in Vercel. Paystack uses the owner's test secret, supplied directly in Vercel.
 - Storage CORS accepts the production storefront domain and local development origins.
+- The public Vercel API passed live readiness, catalogue, gallery/review, CORS, direct-upload and signed-download checks. Existing migrated artwork also redirects to Neon successfully. Unsigned admin, cleanup and webhook requests were rejected. Vercel deployment protection remains enabled; the production domain provides public storefront/webhook access.
 
 ## Application changes
 
@@ -88,7 +89,7 @@ NEXT_PUBLIC_DIRECT_UPLOADS=false npm run build
 PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
 ```
 
-Verification results: 20 frontend unit tests, 129 backend unit tests, and 54 browser regression tests passed. Both production builds, TypeScript and lint checks passed. A separate production build with direct uploads enabled passed a Chrome test using a 4.8 MB photo: the file body went to storage while the review API received only a small JSON token request. The isolated API/storage verification also passed with real Neon storage, pooled database access and browser CORS preflights.
+Verification results: 21 frontend unit tests, 129 backend unit tests, and 54 browser regression tests passed. Both production builds, TypeScript and lint checks passed. A separate production build with direct uploads enabled passed a Chrome test using a 4.8 MB photo: the file body went to storage while the review API received only a small JSON token request. These frontend checks were rerun after updating Next.js to 16.4.2; the production dependency audit reports no known vulnerabilities. The isolated API/storage verification and live Vercel upload/download checks also passed with real Neon storage, pooled database access and browser CORS preflights.
 
 The existing browser regression suite mocks backend/provider replies and tests the standard multipart transport. New frontend transport tests and the extra browser test exercise the direct-upload path; the isolated API/storage verification exercises real Neon storage and database behavior. Successful mocked payment tests are not evidence of live payment settlement. To rerun the extra browser test after a build with `NEXT_PUBLIC_DIRECT_UPLOADS=true`, use `PBS_DIRECT_UPLOAD_TEST=true PLAYWRIGHT_CHANNEL=chrome npx playwright test tests/browser/direct-upload.spec.ts`.
 
