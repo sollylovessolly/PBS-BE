@@ -1,4 +1,9 @@
 import {
+  applyPackagePricing,
+  expandPackageItems,
+  packagingCharge,
+} from './package-pricing';
+import {
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -125,7 +130,7 @@ export class OrdersService {
         );
 
         const variants = await Promise.all(
-          createOrderDto.items.map(async (item) => {
+          expandPackageItems(createOrderDto.items).map(async (item) => {
             const variant = await tx.productVariant.findUnique({
               where: {
                 sku: item.variantSku,
@@ -144,6 +149,8 @@ export class OrdersService {
             return {
               variant,
               quantity: item.quantity,
+              packageId: item.packageId,
+              packageGroupId: item.packageGroupId,
               customization: this.orderCustomization.normalize(
                 variant.product.category,
                 item.customization,
@@ -162,6 +169,11 @@ export class OrdersService {
           ),
         }));
 
+        const hasPackages = applyPackagePricing(pricedItems);
+        const { premiumPackaging, packagingFee } = packagingCharge(
+          createOrderDto.premiumPackaging,
+          hasPackages,
+        );
         const subtotal = pricedItems.reduce(
           (total, item) => total + item.unitPrice * item.quantity,
           0,
@@ -180,7 +192,7 @@ export class OrdersService {
             )
           : { amount: 0, code: null };
         const discount = appliedDiscount.amount;
-        const totalAmount = subtotal + deliveryFee - discount;
+        const totalAmount = subtotal + packagingFee + deliveryFee - discount;
 
         /* Validate all physical requirements without deducting them. */
         await this.inventoryAvailability.assertOrderAvailability(
@@ -211,6 +223,8 @@ export class OrdersService {
             source: createOrderDto.source,
 
             subtotal,
+            premiumPackaging,
+            packagingFee,
             deliveryFee,
             discount,
             discountCode: appliedDiscount.code,
@@ -226,7 +240,7 @@ export class OrdersService {
             shipmentServiceCode: createOrderDto.shipment?.serviceCode,
             shipmentCourierId: createOrderDto.shipment?.courierId,
 
-            revenueSnapshot: subtotal,
+            revenueSnapshot: subtotal + packagingFee,
 
             outsourceCostSnapshot: outsourcedCost,
           },
@@ -270,6 +284,8 @@ export class OrdersService {
             source: true,
             paymentStatus: true,
             status: true,
+            premiumPackaging: true,
+            packagingFee: true,
             subtotal: true,
             deliveryFee: true,
             discount: true,
@@ -383,6 +399,8 @@ export class OrdersService {
         orderNumber: true,
         status: true,
         paymentStatus: true,
+        premiumPackaging: true,
+        packagingFee: true,
         subtotal: true,
         deliveryFee: true,
         discount: true,
@@ -419,6 +437,8 @@ export class OrdersService {
         source: true,
         paymentStatus: true,
         status: true,
+        premiumPackaging: true,
+        packagingFee: true,
         subtotal: true,
         deliveryFee: true,
         discount: true,
@@ -581,7 +601,26 @@ export class OrdersService {
     );
     return this.prisma.orderItem.update({
       where: { id: itemId },
-      data: { customization: customization as Prisma.InputJsonValue },
+      data: {
+        customization: {
+          ...Object.fromEntries(
+            Object.entries(
+              (item.customization ?? {}) as Record<string, unknown>,
+            ).filter(([key]) =>
+              [
+                'giftPackageId',
+                'giftPackageName',
+                'giftPackageGroupId',
+                'giftPackagePrice',
+                'premiumPackagingIncluded',
+                'bonusMiniPhotostrip',
+                'bonusNote',
+              ].includes(key),
+            ),
+          ),
+          ...customization,
+        } as Prisma.InputJsonValue,
+      },
     });
   }
 

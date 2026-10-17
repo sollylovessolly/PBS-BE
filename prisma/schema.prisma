@@ -280,6 +280,8 @@ model Order {
   subtotal              Decimal              @db.Decimal(12, 2)
   deliveryFee           Decimal              @default(0) @db.Decimal(12, 2)
   discount              Decimal              @default(0) @db.Decimal(12, 2)
+  premiumPackaging      Boolean              @default(false)
+  packagingFee          Decimal              @default(0) @db.Decimal(12, 2)
   discountCode          String?
   totalAmount           Decimal              @db.Decimal(12, 2)
   /// *

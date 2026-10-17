@@ -2,6 +2,8 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
+  MaxLength,
   IsEmail,
   IsEnum,
   IsInt,
@@ -57,6 +59,18 @@ class DeliveryDto {
 }
 
 class OrderItemDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  packageId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9_-]{1,80}$/)
+  packageGroupId?: string;
+
   @ApiProperty({
     description: 'Stable product variant SKU',
     example: 'POLAROID-STANDARD',
@@ -94,6 +108,14 @@ class ShipmentSelectionDto {
 }
 
 export class CreateOrderDto {
+  @ApiPropertyOptional({
+    description:
+      'Add premium protective packaging for NGN 1500; included at no extra charge with gift packages.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  premiumPackaging?: boolean;
+
   @ApiPropertyOptional({
     description:
       'Stable client-generated idempotency key. Required for WEBSITE orders.',

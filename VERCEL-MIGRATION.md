@@ -101,3 +101,9 @@ The temporary Neon verification branch is retained. It has a small compute endpo
 - [Neon Object Storage authentication](https://neon.com/docs/storage/authentication)
 - [Neon S3 compatibility and browser upload/CORS support](https://neon.com/docs/storage/s3-compatibility)
 - [Vercel cron scheduling limits](https://vercel.com/docs/cron-jobs/usage-and-pricing)
+
+## Gallery, packages and protective packaging
+
+The storefront gallery now uses images committed to its frontend repository; public album pages do not read the legacy gallery API. Customer review uploads and moderation still use the backend.
+
+Apply `20261017210000_add_premium_packaging` before deploying the updated API: it adds defaulted `premiumPackaging` and `packagingFee` fields without changing existing records. Package contents/prices are authoritative in `src/orders/packages.catalogue.ts` and must match the frontend `src/data/packages.json`. Incoming package groups are validated and expanded into physical unit lines; one line carries the fixed package charge and the other included lines have zero price. All physical variants still undergo normal stock and fulfillment validation. Package metadata and the bonus mini photostrip instruction are retained in customization snapshots and displayed by the admin UI.
