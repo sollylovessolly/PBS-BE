@@ -1,6 +1,6 @@
 # Vercel and Neon migration
 
-The application changes are prepared for deployment from `sollylovessolly/pbs-frontend` and `sollylovessolly/PBS-BE`. Existing Render and Supabase services have not been removed. See the final chat handoff for the current deployment URLs and status.
+The application changes are committed and pushed to `main` in `sollylovessolly/pbs-frontend` and `sollylovessolly/PBS-BE`. Both Vercel projects are connected. Production domains are `https://polaroids-by-solly.vercel.app` (storefront) and `https://pbs-be.vercel.app` (API). Existing Render and Supabase services have not been removed. See the final chat handoff for deployment verification status.
 
 ## Completed account changes
 
@@ -9,6 +9,9 @@ The application changes are prepared for deployment from `sollylovessolly/pbs-fr
 - Named storage credential saved in the ignored backend `.env`; no storage credentials are exposed to the frontend or committed.
 - Gallery/review and shared rate-limit migrations applied after testing them on the isolated `vercel-migration-check-20261017` branch.
 - Existing production order/customer data is retained.
+- All 14 existing Supabase files were copied and checksum-verified after the owner resumed the project; all 13 order-artwork references were independently verified in Neon.
+- The backend's production environment and the frontend's four public environment values are configured in Vercel. Paystack uses the owner's test secret, supplied directly in Vercel.
+- Storage CORS accepts the production storefront domain and local development origins.
 
 ## Application changes
 
@@ -24,22 +27,22 @@ The application changes are prepared for deployment from `sollylovessolly/pbs-fr
 
 ## Dashboard steps
 
-1. Publish the updated working source to the renamed GitHub repositories. Both repositories contained local work before this migration; the intended current application includes the new gallery/review modules. The assistant is preparing commits and preserving both frontend branch histories for this publication.
+1. The updated source is published to both renamed GitHub repositories. Both frontend histories were merged without rewriting commits. Future pushes should use `main` for production.
 2. Open [Vercel New Project](https://vercel.com/new). Import `sollylovessolly/PBS-BE` for the backend. Use framework **NestJS**, root directory **./**, and Node.js **24.x**. `vercel.json` supplies the build command. Choose the project name and note its production domain.
 3. Select the existing `polaroids-by-solly` frontend project and connect `sollylovessolly/pbs-frontend`. Use framework **Next.js**, root directory **./**, and Node.js **24.x**. Preserve its existing production domain (or custom domain).
 4. Once both exact domains are known, run the command below from `polaroidsbysolly-api`, replacing the example domains. The assistant can do this when you provide the two URLs. Avoid a trailing slash and do not include `/api` in either argument.
 
    ```bash
-   npm run vercel:env -- --frontend https://your-frontend.vercel.app --api https://your-backend.vercel.app
+   npm run vercel:env -- --frontend https://polaroids-by-solly.vercel.app --api https://pbs-be.vercel.app
    ```
 
-   This writes **backend `.env.vercel`** and **frontend `../polaroidsbysolly/.env.vercel`**, both ignored by Git. The prepared files currently contain explicit `replace-with-...` URL placeholders; replace those by regenerating before importing. They contain private credentials: do not commit them, post them in chat, or send them to anyone.
+   This writes **backend `.env.vercel`** and **frontend `../polaroidsbysolly/.env.vercel`**, both ignored by Git. The local files have been regenerated with the actual production domains. They contain private credentials: do not commit them, post them in chat, or send them to anyone.
 
 5. In each project's Vercel Environment Variables settings, import the corresponding `.env.vercel` into **Production**. Add backend `PAYSTACK_SECRET_KEY` directly from the existing Render environment; it was absent locally. Also copy any Render-only shipping/notification settings you still use. Do not import the raw backend `.env`, which includes local URLs and bootstrap values.
 6. Confirm frontend `NEXT_PUBLIC_PAYSTACK_TEST_MODE=true` for a backend `sk_test_...` key, or `false` for `sk_live_...`. The environment generator defaults to test when the local secret is absent, so match this manually to the key you add in Vercel.
-7. Configure storage CORS for the actual storefront/admin domain. From the backend folder, set `FRONTEND_URL` and `ADMIN_FRONTEND_URL` to that domain for the `npm run storage:configure` command. The assistant can do this; only localhost origins are configured until the production URL is supplied. For an additional custom domain, use `ADDITIONAL_FRONTEND_ORIGINS` on the backend and when running storage configuration.
+7. Storage CORS is configured for `https://polaroids-by-solly.vercel.app` plus localhost development origins. For an additional custom domain, use `ADDITIONAL_FRONTEND_ORIGINS` on the backend and when running storage configuration.
 8. Deploy the backend, then deploy/redeploy the frontend. Next.js embeds public variables during build; changing them requires a rebuild. Keep production API routes reachable from the storefront and Paystack, with admin access protected by the application login.
-9. In Paystack, set the webhook URL to `https://your-backend.vercel.app/api/payments/webhook` and the callback to `https://your-frontend.vercel.app/payments/callback`. Use the same test/live mode as the deployed secret.
+9. In Paystack Test Mode, set the webhook URL to `https://pbs-be.vercel.app/api/payments/webhook` and the callback to `https://polaroids-by-solly.vercel.app/payments/callback`. Use the same test/live mode as the deployed secret.
 10. Send the deployed URLs back for read-only health, catalogue, media and CORS verification. A controlled Paystack test payment still requires the real test credentials/provider flow.
 
 Do not select a paid plan or enable usage upgrades as part of these steps. No paid subscription or billing upgrade was created by this migration.
